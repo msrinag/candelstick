@@ -4,6 +4,9 @@ import pandas as pd
 import plotly.express as px
 import yfinance as yf
 
+import plotly
+print(plotly.__version__)
+
 st.set_page_config(layout="wide")
 
 st.title("Stock Price Analysis")
