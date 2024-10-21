@@ -18,8 +18,11 @@ stock_symbol = st.text_input("Stock Symbol", value='AAPL').upper()
 if stock_symbol:
     df = yf.download(stock_symbol, start=start_date, end=end_date)
 
-    # Ensure data is not empty
-    if not df.empty:
+    # Display the dataframe for debugging
+    st.write("DataFrame preview:", df.head())
+
+    # Ensure data is not empty and contains required columns
+    if not df.empty and 'Close' in df.columns and 'Volume' in df.columns:
         # Drop rows with NaN in 'Close' or 'Volume' columns
         df = df.dropna(subset=['Close', 'Volume'])
 
@@ -40,18 +43,4 @@ if stock_symbol:
                             labels={'Volume': 'Volume'}, 
                             color_discrete_sequence=['red'])
 
-        # Update layout for the price figure
-        fig.update_layout(
-            xaxis_title='Date',
-            yaxis_title='Price (USD $/share)',
-            plot_bgcolor='lightsteelblue',
-            height=400,
-            width=800,
-            margin=dict(l=50, r=50, b=100, t=100, pad=4),
-        )
-
-        # Step 6: Display the charts
-        st.plotly_chart(fig)
-        st.plotly_chart(volume_fig)
-    else:
-        st.error("No data available for the selected date range or stock symbol.")
+        # Update layo
