@@ -1,51 +1,75 @@
-import streamlit as st
 import datetime as dt
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import yfinance as yf
-
-import plotly
-print(plotly.__version__)
-
-st.set_page_config(layout="wide")
+import streamlit as st
 
 st.title("Stock Price Analysis")
 
-# User input for stock symbol and date range
+# User input for stock symbol
 stock_symbol = st.text_input("Enter stock symbol (e.g., AAPL):", "AAPL")
+
+# Date range selection
 start_date = st.date_input("Start date", dt.date(2020, 1, 1))
 end_date = st.date_input("End date", dt.date.today())
 
-# Download stock data
-@st.cache_data
-def load_data(symbol, start, end):
-    return yf.download(symbol, start=start, end=end)
+if st.button("Generate Chart"):
+    # Download stock data
+    df = yf.download(stock_symbol, start=start_date, end=end_date)
 
-df = load_data(stock_symbol, start_date, end_date)
+    # Calculate moving averages
+    df['MA50'] = df['Close'].rolling(window=50, min_periods=0).mean()
+    df['MA200'] = df['Close'].rolling(window=200, min_periods=0).mean()
 
-# Calculate moving averages
-df['MA50'] = df['Close'].rolling(window=50, min_periods=0).mean()
-df['MA200'] = df['Close'].rolling(window=200, min_periods=0).mean()
+    # Create the figure
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                        subplot_titles=(f"{stock_symbol} Price", "Volume"),
+                        row_heights=[0.7, 0.3])
 
-# Create candlestick chart
-fig_candlestick = px.candlestick(df, x=df.index, open='Open', high='High', low='Low', close='Close',
-                                 title=f"{stock_symbol} Price")
-fig_candlestick.add_scatter(x=df.index, y=df['MA50'], mode='lines', name='50-Day MA', line=dict(color='gray'))
-fig_candlestick.add_scatter(x=df.index, y=df['MA200'], mode='lines', name='200-Day MA', line=dict(color='lightgray'))
+    # Add candlestick chart
+    fig.add_trace(go.Candlestick(x=df.index,
+                                 open=df['Open'],
+                                 high=df['High'],
+                                 low=df['Low'],
+                                 close=df['Close'],
+                                 name='Candlestick'),
+                  row=1, col=1)
 
-# Create volume chart
-fig_volume = px.bar(df, x=df.index, y='Volume', title="Volume")
+    # Add 50-day moving average
+    fig.add_trace(go.Scatter(x=df.index,
+                             y=df['MA50'],
+                             mode='lines',
+                             name='50-Day MA',
+                             line=dict(color='gray')),
+                  row=1, col=1)
 
-# Update layout
-fig_candlestick.update_layout(xaxis_title='Date', yaxis_title='Price (USD $/share)',
-                              plot_bgcolor='lightsteelblue', showlegend=True)
-fig_volume.update_layout(xaxis_title='Date', yaxis_title='Volume',
-                         plot_bgcolor='lightsteelblue', showlegend=False)
+    # Add 200-day moving average
+    fig.add_trace(go.Scatter(x=df.index,
+                             y=df['MA200'],
+                             mode='lines',
+                             name='200-Day MA',
+                             line=dict(color='lightgray')),
+                  row=1, col=1)
 
-# Display charts
-st.plotly_chart(fig_candlestick, use_container_width=True)
-st.plotly_chart(fig_volume, use_container_width=True)
+    # Add volume bar chart
+    fig.add_trace(go.Bar(x=df.index,
+                         y=df['Volume'],
+                         name='Volume',
+                         marker_color='red'),
+                  row=2, col=1)
 
-# Display dataframe
-st.subheader("Stock Data")
-st.dataframe(df)
+    # Update layout
+    fig.update_layout(
+        title=f'{stock_symbol} Historical Price Chart',
+        xaxis_title='Date',
+        yaxis_title='Price (USD $/share)',
+        plot_bgcolor='lightsteelblue',
+        showlegend=True,
+        xaxis_rangeslider_visible=False,
+        height=600,
+        margin=dict(l=50, r=50, b=100, t=100, pad=4),
+    )
+
+    # Display the chart using Streamlit
+    st.plotly_chart(fig, use_container_width=True)
