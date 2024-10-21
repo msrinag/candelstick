@@ -24,8 +24,7 @@ if stock_symbol:
 
     # Step 4: Create a line plot for the closing price and moving averages
     fig = px.line(df, x=df.index, y='Close', title=f'{stock_symbol} Historical Price Chart', 
-                  labels={'Close': 'Price (USD $/share)'}, 
-                  template='plotly_light')
+                  labels={'Close': 'Price (USD $/share)'})
     
     # Add moving averages
     fig.add_scatter(x=df.index, y=df['MA50'], mode='lines', name='50-Day MA', line=dict(color='gray'))
@@ -34,7 +33,6 @@ if stock_symbol:
     # Step 5: Create a bar plot for the volume
     volume_fig = px.bar(df, x=df.index, y='Volume', title='Volume', 
                         labels={'Volume': 'Volume'}, 
-                        template='plotly_light', 
                         color_discrete_sequence=['red'])
 
     # Update layout for the price figure
