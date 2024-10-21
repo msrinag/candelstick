@@ -1,46 +1,48 @@
+import streamlit as st
 import datetime as dt
 import pandas as pd
-import yfinance as yf
-import streamlit as st
 import plotly.express as px
+import yfinance as yf
 
-# Step 1: Set up the Streamlit app
-st.title("Stock Price Visualization")
+st.set_page_config(layout="wide")
 
-# Define date range for data selection
-start_date = st.date_input("Start Date", value=dt.datetime(2020, 1, 1))
-end_date = st.date_input("End Date", value=dt.datetime.now())
+st.title("Stock Price Analysis")
 
-# Input for stock symbol
-stock_symbol = st.text_input("Stock Symbol", value='AAPL').upper()
+# User input for stock symbol and date range
+stock_symbol = st.text_input("Enter stock symbol (e.g., AAPL):", "AAPL")
+start_date = st.date_input("Start date", dt.date(2020, 1, 1))
+end_date = st.date_input("End date", dt.date.today())
 
-# Step 2: Get stock market data using Yahoo Finance
-if stock_symbol:
-    df = yf.download(stock_symbol, start=start_date, end=end_date)
+# Download stock data
+@st.cache_data
+def load_data(symbol, start, end):
+    return yf.download(symbol, start=start, end=end)
 
-    # Display the dataframe for debugging
-    st.write("DataFrame preview:", df.head())
+df = load_data(stock_symbol, start_date, end_date)
 
-    # Ensure data is not empty and contains required columns
-    if not df.empty and 'Close' in df.columns and 'Volume' in df.columns:
-        # Drop rows with NaN in 'Close' or 'Volume' columns
-        df = df.dropna(subset=['Close', 'Volume'])
+# Calculate moving averages
+df['MA50'] = df['Close'].rolling(window=50, min_periods=0).mean()
+df['MA200'] = df['Close'].rolling(window=200, min_periods=0).mean()
 
-        # Step 3: Construct moving average terms using pandas' rolling function
-        df['MA50'] = df['Close'].rolling(window=50).mean()
-        df['MA200'] = df['Close'].rolling(window=200).mean()
+# Create candlestick chart
+fig_candlestick = px.candlestick(df, x=df.index, open='Open', high='High', low='Low', close='Close',
+                                 title=f"{stock_symbol} Price")
+fig_candlestick.add_scatter(x=df.index, y=df['MA50'], mode='lines', name='50-Day MA', line=dict(color='gray'))
+fig_candlestick.add_scatter(x=df.index, y=df['MA200'], mode='lines', name='200-Day MA', line=dict(color='lightgray'))
 
-        # Step 4: Create a line plot for the closing price and moving averages
-        fig = px.line(df, x=df.index, y='Close', title=f'{stock_symbol} Historical Price Chart', 
-                      labels={'Close': 'Price (USD $/share)'})
-        
-        # Add moving averages
-        fig.add_scatter(x=df.index, y=df['MA50'], mode='lines', name='50-Day MA', line=dict(color='gray'))
-        fig.add_scatter(x=df.index, y=df['MA200'], mode='lines', name='200-Day MA', line=dict(color='lightgray'))
+# Create volume chart
+fig_volume = px.bar(df, x=df.index, y='Volume', title="Volume")
 
-        # Step 5: Create a bar plot for the volume
-        volume_fig = px.bar(df, x=df.index, y='Volume', title='Volume', 
-                            labels={'Volume': 'Volume'}, 
-                            color_discrete_sequence=['red'])
+# Update layout
+fig_candlestick.update_layout(xaxis_title='Date', yaxis_title='Price (USD $/share)',
+                              plot_bgcolor='lightsteelblue', showlegend=True)
+fig_volume.update_layout(xaxis_title='Date', yaxis_title='Volume',
+                         plot_bgcolor='lightsteelblue', showlegend=False)
 
-        # Update layo
+# Display charts
+st.plotly_chart(fig_candlestick, use_container_width=True)
+st.plotly_chart(fig_volume, use_container_width=True)
+
+# Display dataframe
+st.subheader("Stock Data")
+st.dataframe(df)
