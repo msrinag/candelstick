@@ -18,33 +18,40 @@ stock_symbol = st.text_input("Stock Symbol", value='AAPL').upper()
 if stock_symbol:
     df = yf.download(stock_symbol, start=start_date, end=end_date)
 
-    # Step 3: Construct moving average terms using pandas' rolling function
-    df['MA50'] = df['Close'].rolling(window=50).mean()
-    df['MA200'] = df['Close'].rolling(window=200).mean()
+    # Ensure data is not empty
+    if not df.empty:
+        # Drop rows with NaN in 'Close' or 'Volume' columns
+        df = df.dropna(subset=['Close', 'Volume'])
 
-    # Step 4: Create a line plot for the closing price and moving averages
-    fig = px.line(df, x=df.index, y='Close', title=f'{stock_symbol} Historical Price Chart', 
-                  labels={'Close': 'Price (USD $/share)'})
-    
-    # Add moving averages
-    fig.add_scatter(x=df.index, y=df['MA50'], mode='lines', name='50-Day MA', line=dict(color='gray'))
-    fig.add_scatter(x=df.index, y=df['MA200'], mode='lines', name='200-Day MA', line=dict(color='lightgray'))
+        # Step 3: Construct moving average terms using pandas' rolling function
+        df['MA50'] = df['Close'].rolling(window=50).mean()
+        df['MA200'] = df['Close'].rolling(window=200).mean()
 
-    # Step 5: Create a bar plot for the volume
-    volume_fig = px.bar(df, x=df.index, y='Volume', title='Volume', 
-                        labels={'Volume': 'Volume'}, 
-                        color_discrete_sequence=['red'])
+        # Step 4: Create a line plot for the closing price and moving averages
+        fig = px.line(df, x=df.index, y='Close', title=f'{stock_symbol} Historical Price Chart', 
+                      labels={'Close': 'Price (USD $/share)'})
+        
+        # Add moving averages
+        fig.add_scatter(x=df.index, y=df['MA50'], mode='lines', name='50-Day MA', line=dict(color='gray'))
+        fig.add_scatter(x=df.index, y=df['MA200'], mode='lines', name='200-Day MA', line=dict(color='lightgray'))
 
-    # Update layout for the price figure
-    fig.update_layout(
-        xaxis_title='Date',
-        yaxis_title='Price (USD $/share)',
-        plot_bgcolor='lightsteelblue',
-        height=400,
-        width=800,
-        margin=dict(l=50, r=50, b=100, t=100, pad=4),
-    )
+        # Step 5: Create a bar plot for the volume
+        volume_fig = px.bar(df, x=df.index, y='Volume', title='Volume', 
+                            labels={'Volume': 'Volume'}, 
+                            color_discrete_sequence=['red'])
 
-    # Step 6: Display the charts
-    st.plotly_chart(fig)
-    st.plotly_chart(volume_fig)
+        # Update layout for the price figure
+        fig.update_layout(
+            xaxis_title='Date',
+            yaxis_title='Price (USD $/share)',
+            plot_bgcolor='lightsteelblue',
+            height=400,
+            width=800,
+            margin=dict(l=50, r=50, b=100, t=100, pad=4),
+        )
+
+        # Step 6: Display the charts
+        st.plotly_chart(fig)
+        st.plotly_chart(volume_fig)
+    else:
+        st.error("No data available for the selected date range or stock symbol.")
